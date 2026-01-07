@@ -1,0 +1,6 @@
+@KlaipedosVandenysDemo_HostAddress = http://localhost:5150
+
+GET {{KlaipedosVandenysDemo_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,40 @@
+# .NET build artifacts
+bin/
+obj/
+
+# VS / Rider / tooling
+.vs/
+*.user
+*.suo
+*.userprefs
+*.rsuser
+
+# Logs
+*.log
+
+# Generated files
+*.ide/
+
+# Dotnet tools
+/.tools/
+
+# Rider
+.idea/
+*.iml
+
+# Mac/Linux
+.DS_Store
+*.swp
+
+# Certificates
+*.pfx
+*.p12
+
+# VS Code settings (optional keep)
+.vscode/
+
+# User secrets
+**/secrets.json
+
+# Publish output
+**/publish/
