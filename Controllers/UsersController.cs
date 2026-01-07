@@ -17,11 +17,17 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("by-personal-code/{code}")]
-    public async Task<ActionResult<User>> GetByPersonalCode(long code)
+    public async Task<ActionResult> GetByPersonalCode(long code)
     {
-        var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == code);
-        if (user == null) return NotFound();
-        return Ok(user);
+        try
+        {
+            var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == code);
+            return user is not null ? Ok(user) : NotFound();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Lookup failed", message = ex.Message });
+        }
     }
 
     [HttpGet("by-email/{email}")]
