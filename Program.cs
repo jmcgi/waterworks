@@ -6,7 +6,7 @@ using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 // Bind to Railway-provided PORT if present
 var port = Environment.GetEnvironmentVariable("PORT") ?? "3000";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}", "http://0.0.0.0:3000", "http://0.0.0.0:8080");
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -28,6 +28,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapControllers();
+
+// Simple liveness endpoint (no DB)
+app.MapGet("/health/ready", () => Results.Ok(new { status = "ok" }));
 
 var summaries = new[]
 {
