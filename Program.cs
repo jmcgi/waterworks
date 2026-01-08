@@ -5,7 +5,7 @@ using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 // Bind to Railway-provided PORT if present
-var port = Environment.GetEnvironmentVariable("PORT") ?? "3000";
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5051";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}", "http://0.0.0.0:3000", "http://0.0.0.0:8080");
 
 // Add services to the container.
