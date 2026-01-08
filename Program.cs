@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using KlaipedosVandenysDemo.Data;
 using KlaipedosVandenysDemo.Models;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 // Bind to Railway-provided PORT if present
@@ -10,8 +11,11 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+// Resolve Postgres connection string
+string resolvedConn = ConnectionStringHelper.ResolvePostgresConnectionString(builder.Configuration);
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(resolvedConn));
 builder.Services.AddControllers();
 
 var app = builder.Build();
@@ -50,4 +54,51 @@ app.Run();
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
+
+static class ConnectionStringHelper
+{
+    public static string ResolvePostgresConnectionString(ConfigurationManager config)
+    {
+        var fromConnSection = config.GetConnectionString("DefaultConnection");
+        var fromEnvConn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
+                          ?? config["DATABASE_URL"]
+                          ?? fromEnvConn
+                          ?? fromConnSection
+                          ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(databaseUrl))
+            return databaseUrl;
+
+        if (databaseUrl.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+            || databaseUrl.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        {
+            return BuildNpgsqlConnectionStringFromUrl(databaseUrl);
+        }
+
+        return databaseUrl;
+    }
+
+    private static string BuildNpgsqlConnectionStringFromUrl(string url)
+    {
+        var uri = new Uri(url);
+        var userInfo = uri.UserInfo.Split(':', 2);
+        var user = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(0) ?? "");
+        var pass = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(1) ?? "");
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = user,
+            Password = pass,
+            Database = uri.AbsolutePath.TrimStart('/')
+        };
+
+        // Enforce SSL commonly required by managed Postgres providers
+        builder.SslMode = SslMode.Require;
+
+        return builder.ConnectionString;
+    }
 }
