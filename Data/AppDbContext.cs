@@ -15,7 +15,9 @@ public class AppDbContext : DbContext
     {
         modelBuilder.Entity<User>(entity =>
         {
-            entity.ToTable("Users");
+            // Postgres lower-cases unquoted identifiers, so a table created as users
+            // is not the same as a quoted "Users".
+            entity.ToTable("users");
             entity.HasKey(u => u.Id);
             entity.Property(u => u.PersonalCode).IsRequired();
             entity.Property(u => u.Email).HasMaxLength(256).IsRequired();
