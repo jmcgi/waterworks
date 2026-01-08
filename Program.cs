@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using KlaipedosVandenysDemo.Data;
-using KlaipedosVandenysDemo.Models;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,56 +7,56 @@ var builder = WebApplication.CreateBuilder(args);
 // Railway/.NET images typically provide the correct listener configuration via env vars,
 // and overriding it can cause "address already in use" and crash-loop deploys.
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// Railway terminates TLS at the edge. If the runtime env accidentally includes an https URL
+// (e.g., via ASPNETCORE_URLS), Kestrel will try to bind HTTPS and crash without a cert.
+// In non-Development environments, force HTTP-only binding.
+if (!builder.Environment.IsDevelopment())
+{
+    var aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+    if (!string.IsNullOrWhiteSpace(aspnetcoreUrls)
+        && aspnetcoreUrls.Contains("https://", StringComparison.OrdinalIgnoreCase))
+    {
+        var httpOnly = string.Join(
+            ';',
+            aspnetcoreUrls
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(u => u.StartsWith("http://", StringComparison.OrdinalIgnoreCase)));
+
+        if (string.IsNullOrWhiteSpace(httpOnly))
+        {
+            var port = Environment.GetEnvironmentVariable("PORT");
+            httpOnly = !string.IsNullOrWhiteSpace(port) ? $"http://0.0.0.0:{port}" : "http://0.0.0.0:8080";
+        }
+
+        builder.WebHost.UseUrls(httpOnly);
+    }
+}
+
 // Resolve Postgres connection string
 string resolvedConn = ConnectionStringHelper.ResolvePostgresConnectionString(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(resolvedConn));
-builder.Services.AddControllers();
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-app.MapControllers();
 
 // Simple liveness endpoint (no DB)
 app.MapGet("/health/ready", () => Results.Ok(new { status = "ok" }));
 
-var summaries = new[]
+// Demo endpoint: return a user by personal code
+// Keep the existing route used earlier, plus a short demo-friendly alias.
+app.MapGet("/api/users/by-personal-code/{code:long}", async (long code, AppDbContext db) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == code);
+    return user is not null ? Results.Ok(user) : Results.NotFound();
+});
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/user/{personalCode:long}", async (long personalCode, AppDbContext db) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
-
+    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == personalCode);
+    return user is not null ? Results.Ok(user) : Results.NotFound();
+});
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
 
 static class ConnectionStringHelper
 {
