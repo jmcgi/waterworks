@@ -32,13 +32,11 @@ if (!builder.Environment.IsDevelopment())
     }
 }
 
-// DEMO ONLY: hardcoded DB connection string (ignore env vars/config)
-// NOTE: This is intentionally insecure; do not use in real deployments.
-const string HardcodedPostgresConnectionString =
-    "Host=ballast.proxy.rlwy.net;Port=23442;Database=railway;Username=postgres;Password=JFPcaNemJqABAaIzpuUCmvwPcMQhvlDp;Ssl Mode=Require;Trust Server Certificate=true";
+// Resolve Postgres connection string (DATABASE_URL preferred)
+string resolvedConn = ConnectionStringHelper.ResolvePostgresConnectionString(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(HardcodedPostgresConnectionString));
+    options.UseNpgsql(resolvedConn));
 
 var app = builder.Build();
 
@@ -92,4 +90,55 @@ app.MapGet("/user/{personalCode:long}", async (long personalCode, AppDbContext d
 });
 app.Run();
 
-// (ConnectionStringHelper removed for demo simplicity)
+static class ConnectionStringHelper
+{
+    public static string ResolvePostgresConnectionString(ConfigurationManager config)
+    {
+        // Prefer DATABASE_URL (Railway standard), then ConnectionStrings.
+        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
+                          ?? config["DATABASE_URL"]
+                          ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(databaseUrl))
+        {
+            if (databaseUrl.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+                || databaseUrl.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+            {
+                return BuildNpgsqlConnectionStringFromUrl(databaseUrl);
+            }
+
+            // Already a normal Npgsql connection string.
+            return databaseUrl;
+        }
+
+        var fromEnvConn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+        if (!string.IsNullOrWhiteSpace(fromEnvConn))
+            return fromEnvConn;
+
+        return config.GetConnectionString("DefaultConnection") ?? string.Empty;
+    }
+
+    private static string BuildNpgsqlConnectionStringFromUrl(string url)
+    {
+        var uri = new Uri(url);
+        var userInfo = uri.UserInfo.Split(':', 2);
+        var user = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(0) ?? "");
+        var pass = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(1) ?? "");
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = user,
+            Password = pass,
+            Database = uri.AbsolutePath.TrimStart('/')
+        };
+
+        // Railway internal networking may not require SSL; external managed DBs often do.
+        builder.SslMode = uri.Host.EndsWith(".railway.internal", StringComparison.OrdinalIgnoreCase)
+            ? SslMode.Prefer
+            : SslMode.Require;
+
+        return builder.ConnectionString;
+    }
+}
