@@ -17,7 +17,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("by-personal-code/{code}")]
-    public async Task<ActionResult> GetByPersonalCode(long code)
+    public async Task<ActionResult> GetByPersonalCode(string code)
     {
         try
         {

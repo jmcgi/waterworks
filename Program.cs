@@ -61,7 +61,7 @@ app.MapGet("/health/db", async (AppDbContext db) =>
 
 // Demo endpoint: return a user by personal code
 // Keep the existing route used earlier, plus a short demo-friendly alias.
-app.MapGet("/api/users/by-personal-code/{code:long}", async (long code, AppDbContext db) =>
+app.MapGet("/api/users/by-personal-code/{code}", async (string code, AppDbContext db) =>
 {
     try
     {
@@ -75,7 +75,7 @@ app.MapGet("/api/users/by-personal-code/{code:long}", async (long code, AppDbCon
     }
 });
 
-app.MapGet("/user/{personalCode:long}", async (long personalCode, AppDbContext db) =>
+app.MapGet("/user/{personalCode}", async (string personalCode, AppDbContext db) =>
 {
     try
     {
