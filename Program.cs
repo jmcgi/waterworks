@@ -43,18 +43,50 @@ var app = builder.Build();
 // Simple liveness endpoint (no DB)
 app.MapGet("/health/ready", () => Results.Ok(new { status = "ok" }));
 
+// DB connectivity check (helps distinguish network vs DB issues)
+app.MapGet("/health/db", async (AppDbContext db) =>
+{
+    try
+    {
+        var canConnect = await db.Database.CanConnectAsync();
+        return canConnect
+            ? Results.Ok(new { status = "ok" })
+            : Results.Problem(statusCode: 503, title: "db-unavailable");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(statusCode: 500, title: "db-error", detail: ex.GetBaseException().Message);
+    }
+});
+
 // Demo endpoint: return a user by personal code
 // Keep the existing route used earlier, plus a short demo-friendly alias.
 app.MapGet("/api/users/by-personal-code/{code:long}", async (long code, AppDbContext db) =>
 {
-    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == code);
-    return user is not null ? Results.Ok(user) : Results.NotFound();
+    try
+    {
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == code);
+        return user is not null ? Results.Ok(user) : Results.NotFound();
+    }
+    catch (Exception ex)
+    {
+        var root = ex.GetBaseException();
+        return Results.Problem(statusCode: 500, title: "lookup-failed", detail: root.Message);
+    }
 });
 
 app.MapGet("/user/{personalCode:long}", async (long personalCode, AppDbContext db) =>
 {
-    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == personalCode);
-    return user is not null ? Results.Ok(user) : Results.NotFound();
+    try
+    {
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == personalCode);
+        return user is not null ? Results.Ok(user) : Results.NotFound();
+    }
+    catch (Exception ex)
+    {
+        var root = ex.GetBaseException();
+        return Results.Problem(statusCode: 500, title: "lookup-failed", detail: root.Message);
+    }
 });
 app.Run();
 
@@ -84,6 +116,7 @@ static class ConnectionStringHelper
 
     private static string BuildNpgsqlConnectionStringFromUrl(string url)
     {
+        // Accept URLs that include query params (common on hosted Postgres)
         var uri = new Uri(url);
         var userInfo = uri.UserInfo.Split(':', 2);
         var user = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(0) ?? "");
@@ -100,6 +133,8 @@ static class ConnectionStringHelper
 
         // Enforce SSL commonly required by managed Postgres providers
         builder.SslMode = SslMode.Require;
+        // Demo-friendly: avoid cert chain issues with managed providers.
+        builder.TrustServerCertificate = true;
 
         return builder.ConnectionString;
     }
