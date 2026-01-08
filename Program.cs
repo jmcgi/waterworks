@@ -32,11 +32,13 @@ if (!builder.Environment.IsDevelopment())
     }
 }
 
-// Resolve Postgres connection string
-string resolvedConn = ConnectionStringHelper.ResolvePostgresConnectionString(builder.Configuration);
+// DEMO ONLY: hardcoded DB connection string (ignore env vars/config)
+// NOTE: This is intentionally insecure; do not use in real deployments.
+const string HardcodedPostgresConnectionString =
+    "Host=ballast.proxy.rlwy.net;Port=23442;Database=railway;Username=postgres;Password=JFPcaNemJqABAaIzpuUCmvwPcMQhvlDp;Ssl Mode=Require;Trust Server Certificate=true";
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(resolvedConn));
+    options.UseNpgsql(HardcodedPostgresConnectionString));
 
 var app = builder.Build();
 
@@ -90,52 +92,4 @@ app.MapGet("/user/{personalCode:long}", async (long personalCode, AppDbContext d
 });
 app.Run();
 
-static class ConnectionStringHelper
-{
-    public static string ResolvePostgresConnectionString(ConfigurationManager config)
-    {
-        var fromConnSection = config.GetConnectionString("DefaultConnection");
-        var fromEnvConn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
-                          ?? config["DATABASE_URL"]
-                          ?? fromEnvConn
-                          ?? fromConnSection
-                          ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(databaseUrl))
-            return databaseUrl;
-
-        if (databaseUrl.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
-            || databaseUrl.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
-        {
-            return BuildNpgsqlConnectionStringFromUrl(databaseUrl);
-        }
-
-        return databaseUrl;
-    }
-
-    private static string BuildNpgsqlConnectionStringFromUrl(string url)
-    {
-        // Accept URLs that include query params (common on hosted Postgres)
-        var uri = new Uri(url);
-        var userInfo = uri.UserInfo.Split(':', 2);
-        var user = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(0) ?? "");
-        var pass = Uri.UnescapeDataString(userInfo.ElementAtOrDefault(1) ?? "");
-
-        var builder = new NpgsqlConnectionStringBuilder
-        {
-            Host = uri.Host,
-            Port = uri.Port > 0 ? uri.Port : 5432,
-            Username = user,
-            Password = pass,
-            Database = uri.AbsolutePath.TrimStart('/')
-        };
-
-        // Enforce SSL commonly required by managed Postgres providers
-        builder.SslMode = SslMode.Require;
-        // Demo-friendly: avoid cert chain issues with managed providers.
-        builder.TrustServerCertificate = true;
-
-        return builder.ConnectionString;
-    }
-}
+// (ConnectionStringHelper removed for demo simplicity)
