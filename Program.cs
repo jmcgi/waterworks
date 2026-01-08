@@ -4,15 +4,9 @@ using KlaipedosVandenysDemo.Models;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
-// Bind to Railway-provided PORT if present.
-// Railway's internal proxy may connect over IPv6, so bind both IPv4 + IPv6.
-var railwayPort = Environment.GetEnvironmentVariable("PORT");
-if (!string.IsNullOrWhiteSpace(railwayPort))
-{
-    builder.WebHost.UseUrls(
-        $"http://0.0.0.0:{railwayPort}",
-        $"http://[::]:{railwayPort}");
-}
+// NOTE: Do not hard-bind URLs here for Railway.
+// Railway/.NET images typically provide the correct listener configuration via env vars,
+// and overriding it can cause "address already in use" and crash-loop deploys.
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
