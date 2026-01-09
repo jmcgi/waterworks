@@ -91,13 +91,13 @@ app.MapGet("/user/{personalCode}", async (string personalCode, AppDbContext db) 
 
 // Endpoint: GET /api/users/{id}/balance
 // Returns sum of unpaid bills for user
-app.MapGet("/api/users/{id}/balance", async (int id, AppDbContext db) =>
+app.MapGet("/api/users/{id}/balance", async (string id, AppDbContext db) =>
 {
     try
     {
         var bills = await db.Bills
             .AsNoTracking()
-            .Where(b => b.UserId == id && b.Status == "unpaid")
+            .Where(b => b.UserId.ToString() == id && b.Status == "unpaid")
             .ToListAsync();
         decimal sum = 0;
         foreach (var bill in bills)
