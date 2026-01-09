@@ -65,7 +65,8 @@ app.MapGet("/api/users/by-personal-code/{code}", async (string code, AppDbContex
 {
     try
     {
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == code);
+        var users = await db.Users.AsNoTracking().ToListAsync();
+        var user = users.FirstOrDefault(u => u.PersonalCode == code);
         return user is not null ? Results.Ok(user) : Results.NotFound();
     }
     catch (Exception ex)
@@ -79,7 +80,8 @@ app.MapGet("/user/{personalCode}", async (string personalCode, AppDbContext db) 
 {
     try
     {
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.PersonalCode == personalCode);
+        var users = await db.Users.AsNoTracking().ToListAsync();
+        var user = users.FirstOrDefault(u => u.PersonalCode == personalCode);
         return user is not null ? Results.Ok(user) : Results.NotFound();
     }
     catch (Exception ex)
@@ -95,14 +97,18 @@ app.MapGet("/api/users/{id}/balance", async (string id, AppDbContext db) =>
 {
     try
     {
-        var bills = await db.Bills
-            .AsNoTracking()
-            .ToListAsync();
-        decimal sum = bills
-            .Where(b => b.UserId == id && b.Status == "unpaid")
-            .Select(b => decimal.TryParse(b.Amount, out var amt) ? amt : 0)
-            .Sum();
-        return Results.Ok(new { userId = id, unpaidBalance = sum });
+        var bills = await db.Bills.AsNoTracking().ToListAsync();
+        decimal sum = 0;
+        foreach (var bill in bills)
+        {
+            if (bill.UserId == id && bill.Status == "unpaid" && decimal.TryParse(bill.Amount, out var amt))
+                sum += amt;
+        }
+        return Results.Ok(new {
+            userId = id,
+            unpaidBalance = sum,
+            unpaidBalanceWords = NumberToLtWords(sum)
+        });
     }
     catch (Exception ex)
     {
@@ -110,6 +116,56 @@ app.MapGet("/api/users/{id}/balance", async (string id, AppDbContext db) =>
         return Results.Problem(statusCode: 500, title: "balance-error", detail: root.Message);
     }
 });
+
+// Lithuanian number-to-words for euros/centai (demo, covers 0-9999.99)
+static string NumberToLtWords(decimal amount)
+{
+    string[] units = { "nulis", "vienas", "du", "trys", "keturi", "penki", "šeši", "septyni", "aštuoni", "devyni" };
+    string[] teens = { "dešimt", "vienuolika", "dvylika", "trylika", "keturiolika", "penkiolika", "šešiolika", "septyniolika", "aštuoniolika", "devyniolika" };
+    string[] tens = { "", "dešimt", "dvidešimt", "trisdešimt", "keturiasdešimt", "penkiasdešimt", "šešiasdešimt", "septyniasdešimt", "aštuoniasdešimt", "devyniasdešimt" };
+    string[] hundreds = { "", "šimtas", "du šimtai", "trys šimtai", "keturi šimtai", "penki šimtai", "šeši šimtai", "septyni šimtai", "aštuoni šimtai", "devyni šimtai" };
+
+    int euros = (int)amount;
+    int cents = (int)((amount - euros) * 100);
+
+    string ToWords(int n)
+    {
+        if (n == 0) return units[0];
+        var parts = new List<string>();
+        if (n >= 100)
+        {
+            parts.Add(hundreds[n / 100]);
+            n %= 100;
+        }
+        if (n >= 20)
+        {
+            parts.Add(tens[n / 10]);
+            n %= 10;
+        }
+        if (n >= 10)
+        {
+            parts.Add(teens[n - 10]);
+            n = 0;
+        }
+        if (n > 0)
+        {
+            parts.Add(units[n]);
+        }
+        return string.Join(" ", parts);
+    }
+
+    string euroWord = euros == 1 ? "euras" : (euros % 10 >= 2 && euros % 10 <= 9 && (euros % 100 < 10 || euros % 100 >= 20) ? "eurai" : "eurų");
+    string centWord = cents == 1 ? "centas" : (cents % 10 >= 2 && cents % 10 <= 9 && (cents % 100 < 10 || cents % 100 >= 20) ? "centai" : "centų");
+
+    string result = "";
+    if (euros > 0)
+        result += ToWords(euros) + " " + euroWord;
+    if (cents > 0)
+        result += (result.Length > 0 ? " " : "") + ToWords(cents) + " " + centWord;
+    if (result == "")
+        result = "nulis eurų";
+    return result.Trim();
+}
 app.Run();
 
 static class ConnectionStringHelper
