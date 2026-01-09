@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Bill> Bills => Set<Bill>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +31,16 @@ public class AppDbContext : DbContext
             entity.HasIndex(u => u.Email);
             entity.HasIndex(u => u.Surname);
             entity.HasIndex(u => u.Phone);
+        });
+        
+        modelBuilder.Entity<Bill>(entity =>
+        {
+            entity.ToTable("bills");
+            entity.HasKey(b => b.Id);
+            entity.Property(b => b.Id).HasColumnName("id");
+            entity.Property(b => b.UserId).HasColumnName("userid");
+            entity.Property(b => b.Amount).HasColumnName("amount");
+            entity.Property(b => b.Status).HasColumnName("status");
         });
     }
 }

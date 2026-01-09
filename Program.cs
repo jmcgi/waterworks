@@ -88,6 +88,25 @@ app.MapGet("/user/{personalCode}", async (string personalCode, AppDbContext db) 
         return Results.Problem(statusCode: 500, title: "lookup-failed", detail: root.Message);
     }
 });
+
+// Endpoint: GET /api/users/{id}/balance
+// Returns sum of unpaid bills for user
+app.MapGet("/api/users/{id}/balance", async (int id, AppDbContext db) =>
+{
+    try
+    {
+        var sum = await db.Bills
+            .AsNoTracking()
+            .Where(b => b.UserId == id && b.Status == "unpaid")
+            .SumAsync(b => b.Amount);
+        return Results.Ok(new { userId = id, unpaidBalance = sum });
+    }
+    catch (Exception ex)
+    {
+        var root = ex.GetBaseException();
+        return Results.Problem(statusCode: 500, title: "balance-error", detail: root.Message);
+    }
+});
 app.Run();
 
 static class ConnectionStringHelper
