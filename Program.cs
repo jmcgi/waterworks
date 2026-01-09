@@ -97,14 +97,11 @@ app.MapGet("/api/users/{id}/balance", async (string id, AppDbContext db) =>
     {
         var bills = await db.Bills
             .AsNoTracking()
-            .Where(b => b.UserId.ToString() == id && b.Status == "unpaid")
             .ToListAsync();
-        decimal sum = 0;
-        foreach (var bill in bills)
-        {
-            if (decimal.TryParse(bill.Amount.ToString(), out var amt))
-                sum += amt;
-        }
+        decimal sum = bills
+            .Where(b => b.UserId == id && b.Status == "unpaid")
+            .Select(b => decimal.TryParse(b.Amount, out var amt) ? amt : 0)
+            .Sum();
         return Results.Ok(new { userId = id, unpaidBalance = sum });
     }
     catch (Exception ex)
