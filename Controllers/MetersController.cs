@@ -122,7 +122,7 @@ public class MetersController : ControllerBase
     }
 
     [HttpGet("by-user/{userId}")]
-    public async Task<ActionResult<IEnumerable<object>>> GetByUser(int userId)
+    public async Task<ActionResult<IEnumerable<object>>> GetByUser(string userId)
     {
         var meters = await _db.Meters.AsNoTracking().Where(m => m.UserId == userId).ToListAsync();
         return meters.Select(m => new {
@@ -136,7 +136,7 @@ public class MetersController : ControllerBase
     }
 
     [HttpGet("by-user-type")]
-    public async Task<ActionResult<object>> GetByUserAndType([FromQuery] int userId, [FromQuery] string type)
+    public async Task<ActionResult<object>> GetByUserAndType([FromQuery] string userId, [FromQuery] string type)
     {
         var meter = await _db.Meters.AsNoTracking().FirstOrDefaultAsync(m => m.UserId == userId && m.MeterType == type);
         if (meter is null) return NotFound();
