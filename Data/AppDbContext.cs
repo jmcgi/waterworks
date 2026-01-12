@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Bill> Bills => Set<Bill>();
+    public DbSet<Meter> Meters => Set<Meter>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +42,16 @@ public class AppDbContext : DbContext
             entity.Property(b => b.UserId).HasColumnName("userid");
             entity.Property(b => b.Amount).HasColumnName("amount");
             entity.Property(b => b.Status).HasColumnName("status");
+        });
+        
+        modelBuilder.Entity<Meter>(entity =>
+        {
+            entity.ToTable("meters");
+            entity.HasKey(m => m.Id);
+            entity.Property(m => m.Id).HasColumnName("id");
+            entity.Property(m => m.MeterType).HasColumnName("metertype");
+            entity.Property(m => m.Value).HasColumnName("value");
+            entity.Property(m => m.UserId).HasColumnName("userid");
         });
     }
 }
