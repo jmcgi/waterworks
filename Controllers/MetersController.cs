@@ -15,6 +15,7 @@ public class MetersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Meter>> Create(Meter meter)
     {
+        meter.LastUpdated = DateTime.Now;
         _db.Meters.Add(meter);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(GetById), new { id = meter.Id }, meter);
@@ -105,6 +106,7 @@ public class MetersController : ControllerBase
         meter.MeterType = input.MeterType;
         meter.Value = input.Value;
         meter.UserId = input.UserId;
+        meter.LastUpdated = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return Ok(meter);
     }
@@ -117,5 +119,34 @@ public class MetersController : ControllerBase
         _db.Meters.Remove(meter);
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    [HttpGet("by-user/{userId}")]
+    public async Task<ActionResult<IEnumerable<object>>> GetByUser(int userId)
+    {
+        var meters = await _db.Meters.AsNoTracking().Where(m => m.UserId == userId).ToListAsync();
+        return meters.Select(m => new {
+            m.Id,
+            m.MeterType,
+            Value = m.Value.ToString("F2"),
+            m.UserId,
+            m.LastUpdated,
+            ValueWords = NumberToLtWords(decimal.Round(m.Value, 2))
+        }).ToList();
+    }
+
+    [HttpGet("by-user-type")]
+    public async Task<ActionResult<object>> GetByUserAndType([FromQuery] int userId, [FromQuery] string type)
+    {
+        var meter = await _db.Meters.AsNoTracking().FirstOrDefaultAsync(m => m.UserId == userId && m.MeterType == type);
+        if (meter is null) return NotFound();
+        return Ok(new {
+            meter.Id,
+            meter.MeterType,
+            Value = meter.Value.ToString("F2"),
+            meter.UserId,
+            meter.LastUpdated,
+            ValueWords = NumberToLtWords(decimal.Round(meter.Value, 2))
+        });
     }
 }

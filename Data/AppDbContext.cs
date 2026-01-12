@@ -52,6 +52,7 @@ public class AppDbContext : DbContext
             entity.Property(m => m.MeterType).HasColumnName("metertype");
             entity.Property(m => m.Value).HasColumnName("value");
             entity.Property(m => m.UserId).HasColumnName("userid");
+            entity.Property(m => m.LastUpdated).HasColumnName("lastupdated");
         });
     }
 }

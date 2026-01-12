@@ -6,4 +6,5 @@ public class Meter
     public string MeterType { get; set; } = string.Empty; // e.g., "hot_water", "cold_water"
     public decimal Value { get; set; }
     public int UserId { get; set; }
+    public DateTime LastUpdated { get; set; }
 }
