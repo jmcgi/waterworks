@@ -3,6 +3,9 @@ using KlaipedosVandenysDemo.Data;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Register controllers for attribute routing (e.g., MetersController)
+builder.Services.AddControllers();
 // NOTE: Do not hard-bind URLs here for Railway.
 // Railway/.NET images typically provide the correct listener configuration via env vars,
 // and overriding it can cause "address already in use" and crash-loop deploys.
@@ -37,6 +40,7 @@ string resolvedConn = ConnectionStringHelper.ResolvePostgresConnectionString(bui
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(resolvedConn));
+
 
 var app = builder.Build();
 
@@ -166,6 +170,10 @@ static string NumberToLtWords(decimal amount)
         result = "nulis eurų";
     return result.Trim();
 }
+
+// Map attribute-routed controllers (e.g., /api/meters)
+app.MapControllers();
+
 app.Run();
 
 static class ConnectionStringHelper
