@@ -21,7 +21,7 @@ public class MetersController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = meter.Id }, meter);
     }
 
-    // Helper for Lithuanian number-to-words (reuse from Program.cs)
+    // Helper for Lithuanian number-to-words for cubic meters (water meters)
     private static string NumberToLtWords(decimal amount)
     {
         string[] units = { "nulis", "vienas", "du", "trys", "keturi", "penki", "šeši", "septyni", "aštuoni", "devyni" };
@@ -29,8 +29,8 @@ public class MetersController : ControllerBase
         string[] tens = { "", "dešimt", "dvidešimt", "trisdešimt", "keturiasdešimt", "penkiasdešimt", "šešiasdešimt", "septyniasdešimt", "aštuoniasdešimt", "devyniasdešimt" };
         string[] hundreds = { "", "šimtas", "du šimtai", "trys šimtai", "keturi šimtai", "penki šimtai", "šeši šimtai", "septyni šimtai", "aštuoni šimtai", "devyni šimtai" };
 
-        int euros = (int)amount;
-        int cents = (int)((amount - euros) * 100);
+        int cubicMeters = (int)amount;
+        int liters = (int)Math.Round((amount - cubicMeters) * 1000); // 1 cubic meter = 1000 liters
 
         string ToWords(int n)
         {
@@ -58,16 +58,19 @@ public class MetersController : ControllerBase
             return string.Join(" ", parts);
         }
 
-        string euroWord = euros == 1 ? "euras" : (euros % 10 >= 2 && euros % 10 <= 9 && (euros % 100 < 10 || euros % 100 >= 20) ? "eurai" : "eurų");
-        string centWord = cents == 1 ? "centas" : (cents % 10 >= 2 && cents % 10 <= 9 && (cents % 100 < 10 || cents % 100 >= 20) ? "centai" : "centų");
+        // Lithuanian pluralization for cubic meters
+        string cubicMeterWord = cubicMeters == 1 ? "kubinis metras" :
+            (cubicMeters % 10 >= 2 && cubicMeters % 10 <= 9 && (cubicMeters % 100 < 10 || cubicMeters % 100 >= 20) ? "kubiniai metrai" : "kubinių metrų");
+        string literWord = liters == 1 ? "litras" :
+            (liters % 10 >= 2 && liters % 10 <= 9 && (liters % 100 < 10 || liters % 100 >= 20) ? "litrai" : "litrų");
 
         string result = "";
-        if (euros > 0)
-            result += ToWords(euros) + " " + euroWord;
-        if (cents > 0)
-            result += (result.Length > 0 ? " " : "") + ToWords(cents) + " " + centWord;
+        if (cubicMeters > 0)
+            result += ToWords(cubicMeters) + " " + cubicMeterWord;
+        if (liters > 0)
+            result += (result.Length > 0 ? " " : "") + ToWords(liters) + " " + literWord;
         if (result == "")
-            result = "nulis eurų";
+            result = "nulis kubinių metrų";
         return result.Trim();
     }
 
