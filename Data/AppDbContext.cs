@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserIdentifier> UserIdentifiers => Set<UserIdentifier>();
     public DbSet<Bill> Bills => Set<Bill>();
     public DbSet<Meter> Meters => Set<Meter>();
 
@@ -32,6 +33,24 @@ public class AppDbContext : DbContext
             entity.HasIndex(u => u.Email);
             entity.HasIndex(u => u.Surname);
             entity.HasIndex(u => u.Phone);
+        });
+
+        modelBuilder.Entity<UserIdentifier>(entity =>
+        {
+            entity.ToTable("user_identifiers");
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.UserId).HasColumnName("userid");
+            entity.Property(x => x.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Value).HasColumnName("value").HasMaxLength(64).IsRequired();
+
+            entity.HasIndex(x => x.UserId);
+            entity.HasIndex(x => new { x.Type, x.Value }).IsUnique();
+
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId);
         });
         
         modelBuilder.Entity<Bill>(entity =>
