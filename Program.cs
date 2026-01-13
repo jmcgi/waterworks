@@ -65,20 +65,6 @@ app.MapGet("/health/db", async (AppDbContext db) =>
 
 // Demo endpoint: return a user by personal code
 // Keep the existing route used earlier, plus a short demo-friendly alias.
-app.MapGet("/api/users/by-personal-code/{code}", async (string code, AppDbContext db) =>
-{
-    try
-    {
-        var users = await db.Users.AsNoTracking().ToListAsync();
-        var user = users.FirstOrDefault(u => u.PersonalCode == code);
-        return user is not null ? Results.Ok(user) : Results.NotFound();
-    }
-    catch (Exception ex)
-    {
-        var root = ex.GetBaseException();
-        return Results.Problem(statusCode: 500, title: "lookup-failed", detail: root.Message);
-    }
-});
 
 app.MapGet("/user/{personalCode}", async (string personalCode, AppDbContext db) =>
 {
