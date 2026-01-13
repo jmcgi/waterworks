@@ -83,6 +83,7 @@ public class MetersController : ControllerBase
             m.MeterType,
             Value = m.Value.ToString("F2"),
             m.UserId,
+            LastUpdated = m.LastUpdated.ToString("yyyy-MM-dd"),
             ValueWords = NumberToLtWords(Math.Round((decimal)m.Value, 2))
         }).ToList();
     }
@@ -97,6 +98,7 @@ public class MetersController : ControllerBase
             meter.MeterType,
             Value = meter.Value.ToString("F2"),
             meter.UserId,
+            LastUpdated = meter.LastUpdated.ToString("yyyy-MM-dd"),
             ValueWords = NumberToLtWords(Math.Round((decimal)meter.Value, 2))
         });
     }
@@ -133,7 +135,7 @@ public class MetersController : ControllerBase
             m.MeterType,
             Value = m.Value.ToString("F2"),
             m.UserId,
-            m.LastUpdated,
+            LastUpdated = m.LastUpdated.ToString("yyyy-MM-dd"),
             ValueWords = NumberToLtWords(Math.Round((decimal)m.Value, 2))
         }).ToList();
     }
@@ -148,7 +150,7 @@ public class MetersController : ControllerBase
             meter.MeterType,
             Value = meter.Value.ToString("F2"),
             meter.UserId,
-            meter.LastUpdated,
+            LastUpdated = meter.LastUpdated.ToString("yyyy-MM-dd"),
             ValueWords = NumberToLtWords(Math.Round((decimal)meter.Value, 2))
         });
     }
