@@ -24,9 +24,10 @@ public class AppDbContext : DbContext
             entity.HasKey(u => u.Id);
 
             entity.Property(u => u.Id).HasColumnName("id");
+            entity.Property(u => u.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+            entity.Property(u => u.Surname).HasColumnName("surname").HasMaxLength(100).IsRequired();
             entity.Property(u => u.PersonalCode).HasColumnName("personalcode").IsRequired();
             entity.Property(u => u.Email).HasColumnName("email").HasMaxLength(256).IsRequired();
-            entity.Property(u => u.Surname).HasColumnName("surname").HasMaxLength(100).IsRequired();
             entity.Property(u => u.Phone).HasColumnName("phone").HasMaxLength(50);
 
             entity.HasIndex(u => u.PersonalCode);
