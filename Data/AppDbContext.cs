@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<UserIdentifier> UserIdentifiers => Set<UserIdentifier>();
     public DbSet<Bill> Bills => Set<Bill>();
     public DbSet<Meter> Meters => Set<Meter>();
+    public DbSet<Incident> Incidents => Set<Incident>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,6 +74,22 @@ public class AppDbContext : DbContext
             entity.Property(m => m.Value).HasColumnName("value");
             entity.Property(m => m.UserId).HasColumnName("userid");
             entity.Property(m => m.LastUpdated).HasColumnName("lastupdated");
+        });
+
+        modelBuilder.Entity<Incident>(entity =>
+        {
+            entity.ToTable("incidents");
+            entity.HasKey(i => i.Id);
+            entity.Property(i => i.Id).HasColumnName("id");
+            entity.Property(i => i.UserId).HasColumnName("userid");
+            entity.Property(i => i.Description).HasColumnName("description").HasMaxLength(1000).IsRequired();
+            entity.Property(i => i.CreatedAt).HasColumnName("createdat").IsRequired();
+            entity.Property(i => i.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
+
+            entity.HasIndex(i => i.UserId);
+            entity.HasOne(i => i.User)
+                .WithMany()
+                .HasForeignKey(i => i.UserId);
         });
     }
 }
