@@ -4,6 +4,11 @@ using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Console.WriteLine(
+    $"Startup env: PORT={Environment.GetEnvironmentVariable("PORT")} " +
+    $"ASPNETCORE_URLS={Environment.GetEnvironmentVariable("ASPNETCORE_URLS")} " +
+    $"ASPNETCORE_HTTP_PORTS={Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS")}");
+
 // Register controllers for attribute routing (e.g., MetersController)
 builder.Services.AddControllers();
 // NOTE: Do not hard-bind URLs here for Railway.
@@ -51,6 +56,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 
 var app = builder.Build();
+
+// Root endpoint: helpful for platform health checks
+app.MapGet("/", () => Results.Ok(new { status = "ok" }));
 
 // Simple liveness endpoint (no DB)
 app.MapGet("/health/ready", () => Results.Ok(new { status = "ok" }));
