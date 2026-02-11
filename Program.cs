@@ -12,26 +12,34 @@ builder.Services.AddControllers();
 
 // Railway terminates TLS at the edge. If the runtime env accidentally includes an https URL
 // (e.g., via ASPNETCORE_URLS), Kestrel will try to bind HTTPS and crash without a cert.
-// In non-Development environments, force HTTP-only binding.
+// In non-Development environments, force HTTP-only binding and always respect Railway's PORT.
 if (!builder.Environment.IsDevelopment())
 {
-    var aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-    if (!string.IsNullOrWhiteSpace(aspnetcoreUrls)
-        && aspnetcoreUrls.Contains("https://", StringComparison.OrdinalIgnoreCase))
+    // Railway expects the app to listen on the port provided in PORT.
+    // If we don't, the edge proxy will return 502 with "connection refused".
+    var railwayPort = Environment.GetEnvironmentVariable("PORT");
+    if (!string.IsNullOrWhiteSpace(railwayPort))
     {
-        var httpOnly = string.Join(
-            ';',
-            aspnetcoreUrls
-                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(u => u.StartsWith("http://", StringComparison.OrdinalIgnoreCase)));
-
-        if (string.IsNullOrWhiteSpace(httpOnly))
+        builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
+    }
+    else
+    {
+        // Fallback: if ASPNETCORE_URLS is present but includes https, strip it.
+        var aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+        if (!string.IsNullOrWhiteSpace(aspnetcoreUrls)
+            && aspnetcoreUrls.Contains("https://", StringComparison.OrdinalIgnoreCase))
         {
-            var port = Environment.GetEnvironmentVariable("PORT");
-            httpOnly = !string.IsNullOrWhiteSpace(port) ? $"http://0.0.0.0:{port}" : "http://0.0.0.0:8080";
-        }
+            var httpOnly = string.Join(
+                ';',
+                aspnetcoreUrls
+                    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(u => u.StartsWith("http://", StringComparison.OrdinalIgnoreCase)));
 
-        builder.WebHost.UseUrls(httpOnly);
+            if (string.IsNullOrWhiteSpace(httpOnly))
+                httpOnly = "http://0.0.0.0:8080";
+
+            builder.WebHost.UseUrls(httpOnly);
+        }
     }
 }
 
